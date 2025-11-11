@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en-us">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <link rel="stylesheet" href="style.css">
+  <title>Cut The Rope</title>
+
+  <script>
+    // ====== Game Interface Setup ======
+    window.GameInterface = new Proxy({
+      sendPreloadProgress(progress) {
+        console.log('Loading progress:', progress + '%');
+        return Promise.resolve();
+      },
+      onOffsetChange(callback) { this._offsetChangeCallback = callback; return Promise.resolve(); },
+      onGoToLevel(callback) { this._goToLevelCallback = callback; },
+      onPauseStateChange(callback) { this._pauseStateChangeCallback = callback; },
+      onMuteStateChange(callback) { this._muteStateChangeCallback = callback; },
+      isMuted() { return false; },
+      getOffsets() { return { left: 0, right: 0, top: 0, bottom: 0 }; },
+      hasFeature() { return true; },
+      gameReady() { console.log('Game is ready!'); },
+      getCopyrightLogoURL() { return ''; },
+      getCurrentLanguage() { return 'en'; },
+      storage: {
+        getItem(key) { return localStorage.getItem(key); },
+        setItem(key, value) { localStorage.setItem(key, value); },
+        removeItem(key) { localStorage.removeItem(key); }
+      }
+    }, {
+      get(target, prop) {
+        if (prop in target) return target[prop];
+        return function() {
+          console.log('GameInterface.' + prop + ' called');
+          return Promise.resolve(false);
+        };
+      }
+    });
+
+    // ====== Unity Load Setup ======
+    const buildUrl = "Build";
+    const bootUrl = "./game-boot.js"; // no loaderUrl here
+
+    // Helper: load one script, then callback
+    function loadScript(url, onLoad, onError) {
+      const script = document.createElement("script");
+      script.src = url;
+      script.onload = onLoad;
+      script.onerror = onError || function() { console.error("Failed to load:", url); };
+      document.body.appendChild(script);
+    }
+
+    // ====== Initialize ======
+    window.addEventListener("load", function() {
+      console.log("=== Cut The Rope - Loading Started ===");
+
+      // Load the Unity loader FIRST
+      loadScript(buildUrl + "/cut_the_rope_prod.loader.js", function() {
+        console.log("Unity loader loaded.");
+
+        // Then load game boot (which uses createUnityInstance)
+        loadScript(bootUrl, function() {
+          console.log("Game boot loaded successfully.");
+        });
+      });
+    });
+  </script>
+</head>
+
+<body>
+  <div id="unity-container">
+    <canvas id="unity-canvas"></canvas>
+  </div>
+  <div id="unity-loading-container">
+    <div id="unity-loading-bar">
+      <div id="unity-loading-bar-inner"></div>
+    </div>
+  </div>
+</body>
+
+</html>
